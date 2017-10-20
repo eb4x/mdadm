@@ -766,7 +766,7 @@ static int get_required_spare_criteria(struct state *st,
 
 static int check_donor(struct state *from, struct state *to)
 {
-	struct state *sub;
+	//struct state *sub;
 
 	if (from == to)
 		return 0;
@@ -775,18 +775,58 @@ static int check_donor(struct state *from, struct state *to)
 		return 0;
 	if (from->err)
 		return 0;
-	for (sub = from->subarray; sub; sub = sub->subarray)
-		/* If source array has degraded subarrays, don't
-		 * remove anything
-		 */
-		if (sub->active < sub->raid)
-			return 0;
-	if (from->metadata->ss->external == 0)
-		if (from->active < from->raid)
-			return 0;
+	//for (sub = from->subarray; sub; sub = sub->subarray)
+	//	/* If source array has degraded subarrays, don't
+	//	 * remove anything
+	//	 */
+	//	if (sub->active < sub->raid)
+	//		return 0;
+	//if (from->metadata->ss->external == 0)
+	//	if (from->active < from->raid)
+	//		return 0;
 	if (from->spare <= 0)
 		return 0;
 	return 1;
+}
+
+int test_rebuilding(struct state *dev)
+{
+	int fd = open(dev->devname, O_RDONLY);
+	if (fd < 0) {
+		pr_err("cannot open %s: %s\n",
+			dev->devname, strerror(errno));
+		return 1;
+	}
+
+	//struct mdinfo *sra = sysfs_read(fd, NULL, GET_VERSION | GET_DEVS |
+	//		GET_ARRAY_STATE | GET_STATE);
+	//if (!sra) {
+	//	if (md_get_array_info(fd, &array)) {
+	//		pr_err("%s does not appear to be an md device\n", dev);
+	//		close(fd);
+	//		return rv;
+	//	}
+	//}
+
+	mdu_disk_info_t disk;
+	md_get_disk_info(fd, &disk);
+
+	mdu_array_info_t array;
+	md_get_array_info(fd, &array);
+
+	close(fd);
+
+	if ((disk.state &
+	     ((1 << MD_DISK_ACTIVE) | (1 << MD_DISK_SYNC) |
+	      (1 << MD_DISK_REMOVED) | (1 << MD_DISK_FAULTY) |
+	      (1 << MD_DISK_JOURNAL))) == 0) {
+
+		if (disk.raid_disk < array.raid_disks &&
+		    disk.raid_disk >= 0)
+			return 1;
+	}
+
+	return 0;
 }
 
 static dev_t choose_spare(struct state *from, struct state *to,
@@ -814,6 +854,10 @@ static dev_t choose_spare(struct state *from, struct state *to,
 			    dev_sector_size_from_id(from->devid[d],
 						    &dev_sector_size) &&
 			    sc->sector_size != dev_sector_size)
+				continue;
+
+			// XXX Don't use this device if rebuilding.
+			if (test_rebuilding(from))
 				continue;
 
 			pol = devid_policy(from->devid[d]);

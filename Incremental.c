@@ -941,6 +941,7 @@ static int array_try_spare(char *devname, int *dfdp, struct dev_policy *pol,
 			free(st3);
 			close(mdfd);
 		}
+		/*
 		if ((sra->component_size > 0 &&
 		     st2->ss->avail_size(st2, devsize,
 					 sra->devs ? sra->devs->data_offset :
@@ -952,6 +953,7 @@ static int array_try_spare(char *devname, int *dfdp, struct dev_policy *pol,
 					devname, mp->path);
 			goto next;
 		}
+		*/
 		/* test against target.
 		 * If 'target' is set and 'bare' is false, we only accept
 		 * arrays/containers that match 'target'.
