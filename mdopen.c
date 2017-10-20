@@ -313,7 +313,9 @@ int create_mddev(char *dev, char *name, int autof, int trustworthy,
 			udev_block(devnm);
 		fd = open("/sys/module/md_mod/parameters/new_array", O_WRONLY);
 		if (fd < 0 && errno == ENOENT) {
-			system("modprobe md_mod");
+			if(system("modprobe md_mod"))
+				pr_err("check modprobe md_mod results\n");
+
 			fd = open("/sys/module/md_mod/parameters/new_array", O_WRONLY);
 		}
 		if (fd >= 0) {
